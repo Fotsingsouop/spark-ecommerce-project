@@ -1,0 +1,4 @@
+[0m[[0m[31merror[0m] [0m[0mC:\Users\FOTSING\Dropbox (Personal)\PC\Master DIT\BigData_DataEngIneering_Scala\Projet\spark-ecommerce-project\src\main\scala\com\ecommerce\MainApp.scala:6:1: expected class or object definition[0m
+[0m[[0m[31merror[0m] [0m[0mspark.sparkContext.setLogLevel("ERROR")[0m
+[0m[[0m[31merror[0m] [0m[0m^[0m
+[0m[[0m[31merror[0m] [0m[0mone error found[0m
