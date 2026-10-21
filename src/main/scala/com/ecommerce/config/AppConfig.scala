@@ -63,7 +63,7 @@ object AppConfig {
         conf.getDouble("validation.min-product-rating"),
         conf.getDouble("validation.max-product-rating"),
         conf.getDouble("validation.min-commission-rate"),
-        conf.getdouble("validation.max-commission-rate")
+        conf.getDouble("validation.max-commission-rate")
       )
     )
   }
