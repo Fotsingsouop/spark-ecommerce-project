@@ -2,7 +2,9 @@ package com.ecommerce.ingestion
 
 import com.ecommerce.config.ValidationConfig
 import com.ecommerce.models._
-import org.apache.spark.sql.{Column, DataFrame, Dataset, SaveMode, SparkSession}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, Paths}
+import org.apache.spark.sql.{Column, DataFrame, Dataset, SparkSession}
 import org.apache.spark.sql.functions._
 
 object DataValidation {
@@ -70,7 +72,7 @@ object DataValidation {
       concat_ws("; ",
         when(missingId, lit("MISSING_PRODUCT_ID")),
         when(invalidPrice, lit("INVALID_PRICE_LE_ZERO_OR_NULL")),
-        when(invalidRating, lit(s"INVALID_RATING_OUTSIDE_0_5"))
+        when(invalidRating, lit(s"INVALID_RATING_OUTSIDE_${cfg.minProductRating}_${cfg.maxProductRating}"))
       )
     )
 
@@ -91,7 +93,7 @@ object DataValidation {
       "rejection_reason",
       concat_ws("; ",
         when(missingId, lit("MISSING_MERCHANT_ID")),
-        when(invalidCommission, lit("INVALID_COMMISSION_RATE_OUTSIDE_0_1"))
+        when(invalidCommission, lit(s"INVALID_COMMISSION_RATE_OUTSIDE_${cfg.minCommissionRate}_${cfg.maxCommissionRate}"))
       )
     )
 
@@ -101,6 +103,7 @@ object DataValidation {
     ValidationResult(validDs, rejectedDf)
   }
 
+  /** Nombre total de valeurs nulles, toutes colonnes confondues. */
   private def countTotalNulls(df: DataFrame): Long = {
     if (df.columns.isEmpty) 0L
     else {
@@ -111,6 +114,7 @@ object DataValidation {
     }
   }
 
+  /** Calcule les chiffres de qualité d'un dataset et affiche le bilan. */
   def computeMetrics[T](sourceName: String, rawDs: Dataset[T], result: ValidationResult[T]): QualityMetrics = {
     val rawDf     = rawDs.toDF()
     val totalRead = rawDf.count()
@@ -119,27 +123,54 @@ object DataValidation {
     val rejectPct = if (totalRead > 0) BigDecimal(rejectCnt.toDouble * 100.0 / totalRead).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble else 0.0
     val nullCnt   = countTotalNulls(rawDf)
 
+    println(s"[VALIDATION] $sourceName : lues = $totalRead | valides = $validCnt | rejetees = $rejectCnt | valeurs nulles = $nullCnt")
     QualityMetrics(sourceName, totalRead, validCnt, rejectCnt, rejectPct, nullCnt)
   }
 
-  def generateQualityReport(metrics: Seq[QualityMetrics], reportOutputPath: String)(implicit spark: SparkSession): DataFrame = {
+  /** Construit le DataFrame de synthèse du rapport de qualité. */
+  def buildQualityReport(metrics: Seq[QualityMetrics])(implicit spark: SparkSession): DataFrame = {
     import spark.implicits._
-    val reportDf = metrics.toDF()
-    println("\n=====================================================================")
-    println("                 RAPPORT DE QUALITE DES DONNEES                      ")
-    println("=====================================================================")
-    reportDf.show(truncate = false)
-
-    reportDf
-      .coalesce(1)
-      .write
-      .mode(SaveMode.Overwrite)
-      .option("header", "true")
-      .csv(reportOutputPath)
-
-    reportDf
+    metrics.toDF()
   }
 
+  /** Nombre de transactions dont la clé étrangère n'existe pas dans la table de référence. */
+  private def countOrphans(tx: DataFrame, reference: DataFrame, key: String): Long =
+    tx.select(key)
+      .join(reference.select(key).distinct(), Seq(key), "left_anti")
+      .count()
+
+  /** Ajoute les compteurs d'orphelins au rapport de qualité. */
+  def addReferentialCounters(
+    report: DataFrame,
+    rawTx: Dataset[Transaction],
+    rawUsers: Dataset[User],
+    rawProducts: Dataset[ProductItem],
+    rawMerchants: Dataset[Merchant]
+  ): DataFrame = {
+    val tx = rawTx.toDF()
+    val u = countOrphans(tx, rawUsers.toDF(), "user_id")
+    val p = countOrphans(tx, rawProducts.toDF(), "product_id")
+    val m = countOrphans(tx, rawMerchants.toDF(), "merchant_id")
+    println(s"[INTEGRITE] user_id orphelins = $u | product_id orphelins = $p | merchant_id orphelins = $m")
+
+    report
+      .withColumn("nb_user_id_orphelins", when(col("dataset") === "transactions", lit(u)))
+      .withColumn("nb_product_id_orphelins", when(col("dataset") === "transactions", lit(p)))
+      .withColumn("nb_merchant_id_orphelins", when(col("dataset") === "transactions", lit(m)))
+  }
+
+  /** Enregistre le rapport dans UN SEUL fichier CSV, sans dossier part-xxx. */
+  def saveReportAsCsv(report: DataFrame, path: String): Unit = {
+    val fichier = Paths.get(path)
+    Option(fichier.getParent).foreach(dossier => Files.createDirectories(dossier))
+    val entete  = report.columns.mkString(",")
+    val lignes  = report.collect().map(_.toSeq.map(v => if (v == null) "" else v.toString).mkString(",")).toList
+    val contenu = (entete :: lignes).mkString("\n") + "\n"
+    Files.write(fichier, contenu.getBytes(StandardCharsets.UTF_8))
+    println(s"[RAPPORT] enregistré dans $fichier")
+  }
+
+  /** Vérifie l'intégrité référentielle et retourne les transactions valides vs orphelines. */
   def checkReferentialIntegrity(
     validTx: Dataset[Transaction],
     validUsers: Dataset[User],
@@ -169,7 +200,7 @@ object DataValidation {
     val cleanTx = joined.filter(col("rejection_reason") === "").drop("rejection_reason").as[Transaction]
     val orphanTx = joined.filter(col("rejection_reason") =!= "")
 
-    println("\n--- [BONUS 2.5] Referential Integrity Report ---")
+    println("\n--- [BONUS] Rapport d'intégrité référentielle ---")
     orphanTx.groupBy("rejection_reason").count().show(truncate = false)
 
     ValidationResult(cleanTx, orphanTx)
