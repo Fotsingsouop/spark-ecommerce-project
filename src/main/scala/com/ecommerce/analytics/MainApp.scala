@@ -54,7 +54,7 @@ object MainApp {
         DataValidation.computeMetrics("merchants", rawMerchants, merchantResult)
       )
 
-      DataValidation.generateQualityReport(metrics, appConfig.paths.output.qualityReport)
+      // DataValidation.generateQualityReport(metrics, appConfig.paths.output.qualityReport)
 
       // Bonus 2.5: Referential Integrity Check
       val refIntegrityResult = DataValidation.checkReferentialIntegrity(

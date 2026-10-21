@@ -1,7 +1,7 @@
 package com.ecommerce.ingestion
 
 import com.ecommerce.models._
-import org.apache.spark.sql.{Dataset, SparkSession}
+import org.apache.spark.sql.{AnalysisException, Dataset, SparkSession}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
 
@@ -81,5 +81,24 @@ object DataIngestion {
         col("establishment_date")
       )
       .as[Merchant]
+  }
+
+  /** Méthode générique de lecture protégée par try-catch.
+    * Affiche le nombre de lignes lues ou l'erreur, et renvoie Option[Dataset[T]]
+    * pour éviter qu'une erreur sur un fichier n'arrête tout le pipeline.
+    */
+  def charger[T](nom: String)(lecture: => Dataset[T]): Option[Dataset[T]] = {
+    try {
+      val ds = lecture
+      println(s"[INGESTION] $nom : ${ds.count()} lignes lues")
+      Some(ds)
+    } catch {
+      case e: AnalysisException =>
+        println(s"[ERREUR] $nom : fichier introuvable ou structure incorrecte (${e.getMessage.split("\n").head})")
+        None
+      case e: Exception =>
+        println(s"[ERREUR] $nom : ${e.getMessage}")
+        None
+    }
   }
 }

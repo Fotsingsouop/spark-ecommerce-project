@@ -47,7 +47,7 @@ case class ValidationResult[T](
 )
 
 case class QualityMetrics(
-  source_name: String,
+  dataset: String,
   nb_lignes_lues: Long,
   nb_lignes_valides: Long,
   nb_lignes_rejetees: Long,
