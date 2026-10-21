@@ -53,4 +53,24 @@ class DataTransformation(spark: SparkSession) {
           .when(col("age") < 65, "Âge Moyen")
           .otherwise("Senior"))
   }
+
+  /** Montant sur 7 jours glissants, utilisateur actif, delai depuis la transaction precedente. */
+  def addBehaviorFeatures(df: DataFrame): DataFrame = {
+    val secondes = col("transaction_time").cast("long")
+    val septJours = 7L * 24 * 3600
+
+    // Fenetre glissante : de (t - 7 jours) jusqu'a t, pour un meme utilisateur
+    val fenetre7j = Window.partitionBy("user_id").orderBy(secondes)
+      .rangeBetween(-septJours, Window.currentRow)
+    // Fenetre ordonnee par date, pour retrouver la transaction precedente
+    val ordonnee = Window.partitionBy("user_id").orderBy("transaction_time", "transaction_id")
+
+    df.withColumn("date_jour", to_date(col("transaction_time")))
+      .withColumn("amount_7d", round(sum("amount").over(fenetre7j), 2))
+      .withColumn("active_days_7d", size(collect_set(col("date_jour")).over(fenetre7j)))
+      .withColumn("is_active_user", when(col("active_days_7d") >= 5, 1).otherwise(0))
+      .withColumn("days_since_previous",
+        datediff(col("date_jour"), lag("date_jour", 1).over(ordonnee)))
+  }
+ 
 }
