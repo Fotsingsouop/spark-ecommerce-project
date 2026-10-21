@@ -7,8 +7,9 @@ import org.apache.spark.sql.functions._
 class DataTransformation(spark: SparkSession) {
 
   /** Joint les 4 tables, ajoute les features temporelles, le rang, le total et la tranche d'age. */
-  def enrichTransactionData(transactions: DataFrame, users: DataFrame,
-                            products: DataFrame, merchants: DataFrame): DataFrame = {
+    def enrichTransactionData(transactions: DataFrame, users: DataFrame,
+                            products: DataFrame, merchants: DataFrame,
+                            useBroadcast: Boolean = false): DataFrame = {
 
     // 1. On ne garde que les colonnes utiles, avec des noms sans ambiguite
     val u = users.select("user_id", "age", "annual_income", "city", "customer_segment")
@@ -27,9 +28,9 @@ class DataTransformation(spark: SparkSession) {
 
     // 2. Jointures left : on garde toutes les transactions, meme sans correspondance
     val jointes = transactions
-      .join(u, Seq("user_id"), "left")
-      .join(p, Seq("product_id"), "left")
-      .join(m, Seq("merchant_id"), "left")
+      .join(SparkOptimizations.broadcastIf(u, useBroadcast), Seq("user_id"), "left")
+      .join(SparkOptimizations.broadcastIf(p, useBroadcast), Seq("product_id"), "left")
+      .join(SparkOptimizations.broadcastIf(m, useBroadcast), Seq("merchant_id"), "left")
 
     // 3. Date reelle + UDF, puis on "deplie" la structure tf en colonnes
     val avecTemps = jointes
