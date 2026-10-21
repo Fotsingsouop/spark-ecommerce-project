@@ -72,5 +72,24 @@ class DataTransformation(spark: SparkSession) {
       .withColumn("days_since_previous",
         datediff(col("date_jour"), lag("date_jour", 1).over(ordonnee)))
   }
+
+  /** Ajoute l'ecart au panier moyen, les 4 conditions et le drapeau is_suspicious. */
+  def detectSuspicious(df: DataFrame): DataFrame = {
+    val parUtilisateur = Window.partitionBy("user_id")
+    val ordonnee = Window.partitionBy("user_id").orderBy("transaction_time", "transaction_id")
+    val secondes = col("transaction_time").cast("long")
+
+    df.withColumn("avg_user_amount", avg("amount").over(parUtilisateur))
+      .withColumn("basket_gap_pct",
+        round((col("amount") - col("avg_user_amount")) * 100 / col("avg_user_amount"), 2))
+      .withColumn("seconds_since_previous", secondes - lag(secondes, 1).over(ordonnee))
+      .withColumn("cond_high_amount", when(col("amount") > col("avg_user_amount") * 4, 1).otherwise(0))
+      .withColumn("cond_night", when(col("day_period") === "Night", 1).otherwise(0))
+      .withColumn("cond_fast", when(col("seconds_since_previous") < 300, 1).otherwise(0))
+      .withColumn("cond_crypto", when(col("payment_method") === "CRYPTO", 1).otherwise(0))
+      .withColumn("is_suspicious",
+        when(col("cond_high_amount") + col("cond_night") + col("cond_fast") + col("cond_crypto") >= 2, 1)
+          .otherwise(0))
+  }
  
 }
