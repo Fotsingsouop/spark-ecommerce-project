@@ -92,5 +92,14 @@ class DataTransformation(spark: SparkSession) {
         when(col("cond_high_amount") + col("cond_night") + col("cond_fast") + col("cond_crypto") >= 2, 1)
           .otherwise(0))
   }
+
+    /** Affiche les 20 transactions suspectes avec les montants les plus élevés. */
+  def showTopSuspicious(df: DataFrame): Unit = {
+    println("=== TOP 20 DES TRANSACTIONS SUSPECTES (montants les plus élevés)")
+    df.filter(col("is_suspicious") === 1)
+      .orderBy(col("amount").desc)
+      .select("transaction_id", "user_id", "amount", "day_period", "payment_method", "merchant_category")
+      .show(20, false)
+  }
  
 }
