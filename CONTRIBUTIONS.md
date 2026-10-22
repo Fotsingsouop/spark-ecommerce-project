@@ -21,8 +21,8 @@
 - Difficultés : <à compléter>
 
 ### Membre B – Ibrahima
-- Charge estimée : 20 heures
-- Difficultés : installation de Spark et de sbt sous Windows (réseau d'entreprise, versions de Java) ; compatibilité des versions Scala (2.12 contre 2.13) avec `spark-submit` ; affichage des accents dans la console Windows de sbt (problème d'affichage uniquement, les données sont correctes) ; compréhension des fenêtres glissantes (`rangeBetween`) et contournement de `countDistinct`, interdit dans une fenêtre, par `size(collect_set(...))` ; ambiguïtés du sujet (âge de 25 ans, bornes de `is_working_hours`) ; alignement du code des trois membres sur une base commune.
+- Charge estimée : 25 heures
+- Difficultés : installation de Spark et de sbt sous Windows (réseau d'entreprise, versions de Java) ; compatibilité des versions Scala (2.12 contre 2.13) avec `spark-submit` ; affichage des accents dans la console Windows (problème d'affichage uniquement, les données sont correctes) ; dates invalides (700 timestamps inexploitables) : l'UDF renvoie un `Option`, donc une valeur nulle au lieu d'une erreur, avec un parsing strict (le 31 février est refusé) ; compréhension des fenêtres glissantes (`rangeBetween` en secondes pour de vrais 7 jours) et contournement de `countDistinct`, interdit dans une fenêtre, par `size(collect_set(...))` ; ambiguïtés du sujet (âge de 25 ans, bornes de `is_working_hours`) ; alignement des modèles de données et de la configuration des trois membres sur une base commune ; nettoyage du dépôt Git partagé (`.git` de près de 200 Mo à moins de 4 Mo) ; collaboration à distance avec des fuseaux horaires différents.
 
 ### Membre C – Mahamat
 - Charge estimée : <à compléter> heures
@@ -82,6 +82,7 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 | d5972ef | Ajout de la detection des transactions suspectes (bonus 3.4) | 21/10/2026 |
 | 166117c | Ajout du broadcast optionnel dans les jointures d'enrichissement (question 5.2) | 21/10/2026 |
 | cf22c39 | Ajout du .gitignore (target, output, .idea) et nettoyage de l'historique (commit collectif) | 22/10/2026 |
+| b0db5a9 | Ajout de l'affichage du top 20 des transactions suspectes (question 3.4) | 22/10/2026 |
 
 Le dépôt partagé a été nettoyé le 22/10/2026 : les dossiers `target/` et `output/`, commités par erreur dans les premiers commits, faisaient peser `.git` près de 200 Mo (impossible à envoyer par e-mail). Ils ont été retirés de l'historique (`git filter-branch`), qui pèse maintenant moins de 4 Mo. Les commits de Dominique ont été conservés avec leur auteur, leur date et leur message ; seuls leurs identifiants (hashes) ont changé.
 
@@ -96,7 +97,8 @@ Le dépôt partagé a été nettoyé le 22/10/2026 : les dossiers `target/` et `
 - UDF : 137 347 timestamps lisibles et 700 structures nulles (140 vides, 136 « NA », 424 formats incorrects).
 - Enrichissement : 136 157 transactions avant et après les jointures ; tranches d'âge : Jeune 18 457, Adulte 59 833, Âge Moyen 46 571, Senior 7 023, Inconnu 4 273.
 - Fenêtres : 1 355 transactions avec `is_active_user = 1` et 10 906 premières transactions (délai nul).
-- Transactions suspectes : 2 999, dont les plus gros montants sont 28 279,41, 28 156,15 et 24 894,33.
+- Transactions suspectes : 2 999, dont les plus gros montants sont 28 279,41, 28 156,15 et 24 894,33. Le top 20 est affiché par la méthode `showTopSuspicious` : 19 des 20 transactions sont de nuit et payées en `CRYPTO`.
+- Exécution de l'étape `transformation` depuis le JAR (`spark-submit`, Spark 3.5.9) le 22/10/2026 : 136 157 transactions enrichies, 2 999 suspectes, durée totale de 22 à 27 s.
 
 **Partie 4 (analytique)**
 - KPI : 586 marchands, 133 024 transactions rattachées à un marchand connu, chiffre d'affaires de 52 592 586,01 et commission d'environ 2 743 507,69. Meilleur marchand : M00225, 592 105,25.
