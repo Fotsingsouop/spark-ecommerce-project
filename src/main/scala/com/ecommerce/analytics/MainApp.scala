@@ -4,12 +4,11 @@ import com.ecommerce.config.AppConfig
 import com.ecommerce.ingestion.{DataIngestion, DataValidation}
 import org.apache.spark.sql.SparkSession
 
-
 object MainApp {
   def main(args: Array[String]): Unit = {
     val appConfig = AppConfig.load()
 
-//  FORCE HADOOP TO LOAD LOCAL BINARIES PROGRAMMATICALLY
+    // FORCE HADOOP TO LOAD LOCAL BINARIES PROGRAMMATICALLY
     System.setProperty("hadoop.home.dir", "C:\\hadoop")
 
     implicit val spark: SparkSession = SparkSession.builder()
@@ -27,7 +26,7 @@ object MainApp {
       val rawProducts  = DataIngestion.loadProducts(appConfig.paths.products)
       val rawMerchants = DataIngestion.loadMerchants(appConfig.paths.merchants)
  
-// --- ADD THESE PREVIEW ROWS ---
+      // --- PREVIEW ROWS ---
       println("\n PREVIEW: transactions.csv (First 5 Rows)")
       rawTx.show(5, truncate = false)
 
@@ -39,7 +38,7 @@ object MainApp {
 
       println("\n PREVIEW: merchants.csv (First 5 Rows)")
       rawMerchants.show(5, truncate = false)
-      // ------------------------------
+      // --------------------
 
       println("=== STEP 2: Data Validation & Quality Report ===")
       val txResult       = DataValidation.validateTransactions(rawTx, appConfig.validation)
@@ -47,14 +46,29 @@ object MainApp {
       val productResult  = DataValidation.validateProducts(rawProducts, appConfig.validation)
       val merchantResult = DataValidation.validateMerchants(rawMerchants, appConfig.validation)
 
+      // --- EXPORT DES LIGNES VALIDES (RESPECTANT LE FORMAT D'ORIGINE) ---
+      DataValidation.saveValidAsCsv(txResult.valid, "output/valid/transactions_valid.csv", "transactions")             // CSV
+      DataValidation.saveValidAsJson(userResult.valid, "output/valid/users_valid.json", "users")                       // JSON
+      DataValidation.saveValidAsParquet(productResult.valid, "output/valid/products_valid.parquet", "products")       // PARQUET
+      DataValidation.saveValidAsCsv(merchantResult.valid, "output/valid/merchants_valid.csv", "merchants")             // CSV
+
+      // --- EXPORT DES LIGNES REJETÉES (RESPECTANT LE FORMAT D'ORIGINE) ---
+      DataValidation.saveRejectedAsCsv(txResult.rejected, "output/rejected/transactions_rejected.csv", "transactions") // CSV
+      DataValidation.saveRejectedAsJson(userResult.rejected, "output/rejected/users_rejected.json", "users")           // JSON
+      DataValidation.saveRejectedAsParquet(productResult.rejected, "output/rejected/products_rejected.parquet", "products") // PARQUET
+      DataValidation.saveRejectedAsCsv(merchantResult.rejected, "output/rejected/merchants_rejected.csv", "merchants") // CSV
+
+      // --- CALCUL DES MÉTRIQUES (avec gestion des orphelins) ---
       val metrics = Seq(
-        DataValidation.computeMetrics("transactions", rawTx, txResult),
-        DataValidation.computeMetrics("users", rawUsers, userResult),
+        DataValidation.computeMetrics("merchants", rawMerchants, merchantResult),
         DataValidation.computeMetrics("products", rawProducts, productResult),
-        DataValidation.computeMetrics("merchants", rawMerchants, merchantResult)
+        DataValidation.computeMetrics("transactions", rawTx, txResult, Some(rawTx), Some(rawUsers), Some(rawProducts), Some(rawMerchants)),
+        DataValidation.computeMetrics("users", rawUsers, userResult)
       )
 
-      // DataValidation.generateQualityReport(metrics, appConfig.paths.output.qualityReport)
+      // --- GÉNÉRATION ET ENREGISTREMENT DU RAPPORT DE QUALITÉ ---
+      val reportDf = DataValidation.buildQualityReport(metrics)
+      DataValidation.saveReportAsCsv(reportDf, appConfig.paths.output.qualityReport)
 
       // Bonus 2.5: Referential Integrity Check
       val refIntegrityResult = DataValidation.checkReferentialIntegrity(
