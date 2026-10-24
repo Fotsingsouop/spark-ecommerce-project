@@ -1,6 +1,6 @@
 package com.ecommerce.analytics
 
-import com.ecommerce.config.AppConfig
+import com.ecommerce.utils.AppConfig
 import com.ecommerce.ingestion.{DataIngestion, DataValidation}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.col
