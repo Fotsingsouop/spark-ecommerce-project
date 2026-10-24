@@ -4,8 +4,20 @@ import com.ecommerce.config.ValidationConfig
 import com.ecommerce.models._
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
-import org.apache.spark.sql.{Column, DataFrame, Dataset, SparkSession}
+import org.apache.spark.sql.{Column, DataFrame, Dataset, SaveMode, SparkSession}
 import org.apache.spark.sql.functions._
+
+case class QualityMetrics(
+  dataset: String,
+  nb_lignes_lues: Long,
+  nb_lignes_valides: Long,
+  nb_lignes_rejetees: Long,
+  taux_rejet: Double,
+  nb_valeurs_nulles: Long,
+  orphan_user_refs: java.lang.Long,
+  orphan_product_refs: java.lang.Long,
+  orphan_merchant_refs: java.lang.Long
+)
 
 object DataValidation {
 
@@ -103,7 +115,71 @@ object DataValidation {
     ValidationResult(validDs, rejectedDf)
   }
 
-  /** Nombre total de valeurs nulles, toutes colonnes confondues. */
+  // --- EXPORTS FORMAT CSV (Transactions & Merchants) ---
+  def saveValidAsCsv[T](validDs: Dataset[T], path: String, datasetName: String)(implicit spark: SparkSession): Unit = {
+    import spark.implicits._
+    val validDf = validDs.toDF()
+    println(s"\n[VALIDES] --- APERÇU (5 premières lignes propres : $datasetName) ---")
+    validDf.show(5, truncate = false)
+
+    val fichier = Paths.get(path)
+    Option(fichier.getParent).foreach(Files.createDirectories(_))
+    val entete = validDf.columns.mkString(",")
+    val lignes = validDf.collect().map(_.toSeq.map(v => if (v == null) "" else v.toString).mkString(",")).toList
+    Files.write(fichier, (entete :: lignes).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    println(s"[VALIDES] Export CSV enregistré dans $fichier")
+  }
+
+  def saveRejectedAsCsv(rejectedDf: DataFrame, path: String, datasetName: String): Unit = {
+    println(s"\n[REJET] --- APERÇU (5 premières lignes rejetées : $datasetName) ---")
+    rejectedDf.show(5, truncate = false)
+
+    val fichier = Paths.get(path)
+    Option(fichier.getParent).foreach(Files.createDirectories(_))
+    val entete = rejectedDf.columns.mkString(",")
+    val lignes = rejectedDf.collect().map(_.toSeq.map(v => if (v == null) "" else v.toString).mkString(",")).toList
+    Files.write(fichier, (entete :: lignes).mkString("\n").getBytes(StandardCharsets.UTF_8))
+    println(s"[REJET] Export CSV enregistré dans $fichier")
+  }
+
+  // --- EXPORTS FORMAT JSON (Users) ---
+  def saveValidAsJson[T](validDs: Dataset[T], path: String, datasetName: String)(implicit spark: SparkSession): Unit = {
+    import spark.implicits._
+    val validDf = validDs.toDF()
+    println(s"\n[VALIDES] --- APERÇU (5 premières lignes propres : $datasetName) ---")
+    validDf.show(5, truncate = false)
+
+    validDf.write.mode(SaveMode.Overwrite).json(path)
+    println(s"[VALIDES] Export JSON enregistré dans $path")
+  }
+
+  def saveRejectedAsJson(rejectedDf: DataFrame, path: String, datasetName: String): Unit = {
+    println(s"\n[REJET] --- APERÇU (5 premières lignes rejetées : $datasetName) ---")
+    rejectedDf.show(5, truncate = false)
+
+    rejectedDf.write.mode(SaveMode.Overwrite).json(path)
+    println(s"[REJET] Export JSON enregistré dans $path")
+  }
+
+  // --- EXPORTS FORMAT PARQUET (Products) ---
+  def saveValidAsParquet[T](validDs: Dataset[T], path: String, datasetName: String)(implicit spark: SparkSession): Unit = {
+    import spark.implicits._
+    val validDf = validDs.toDF()
+    println(s"\n[VALIDES] --- APERÇU (5 premières lignes propres : $datasetName) ---")
+    validDf.show(5, truncate = false)
+
+    validDf.write.mode(SaveMode.Overwrite).parquet(path)
+    println(s"[VALIDES] Export Parquet enregistré dans $path")
+  }
+
+  def saveRejectedAsParquet(rejectedDf: DataFrame, path: String, datasetName: String): Unit = {
+    println(s"\n[REJET] --- APERÇU (5 premières lignes rejetées : $datasetName) ---")
+    rejectedDf.show(5, truncate = false)
+
+    rejectedDf.write.mode(SaveMode.Overwrite).parquet(path)
+    println(s"[REJET] Export Parquet enregistré dans $path")
+  }
+
   private def countTotalNulls(df: DataFrame): Long = {
     if (df.columns.isEmpty) 0L
     else {
@@ -114,8 +190,20 @@ object DataValidation {
     }
   }
 
-  /** Calcule les chiffres de qualité d'un dataset et affiche le bilan. */
-  def computeMetrics[T](sourceName: String, rawDs: Dataset[T], result: ValidationResult[T]): QualityMetrics = {
+  private def countOrphans(tx: DataFrame, reference: DataFrame, key: String): Long =
+    tx.select(key)
+      .join(reference.select(key).distinct(), Seq(key), "left_anti")
+      .count()
+
+  def computeMetrics[T](
+    sourceName: String, 
+    rawDs: Dataset[T], 
+    result: ValidationResult[T],
+    rawTx: Option[Dataset[Transaction]] = None,
+    rawUsers: Option[Dataset[User]] = None,
+    rawProducts: Option[Dataset[ProductItem]] = None,
+    rawMerchants: Option[Dataset[Merchant]] = None
+  ): QualityMetrics = {
     val rawDf     = rawDs.toDF()
     val totalRead = rawDf.count()
     val validCnt  = result.valid.count()
@@ -123,54 +211,37 @@ object DataValidation {
     val rejectPct = if (totalRead > 0) BigDecimal(rejectCnt.toDouble * 100.0 / totalRead).setScale(2, BigDecimal.RoundingMode.HALF_UP).toDouble else 0.0
     val nullCnt   = countTotalNulls(rawDf)
 
+    val (uOrphans, pOrphans, mOrphans) = if (sourceName == "transactions") {
+      val txDf = rawDf
+      val u = rawUsers.map(u => countOrphans(txDf, u.toDF(), "user_id")).getOrElse(0L)
+      val p = rawProducts.map(p => countOrphans(txDf, p.toDF(), "product_id")).getOrElse(0L)
+      val m = rawMerchants.map(m => countOrphans(txDf, m.toDF(), "merchant_id")).getOrElse(0L)
+      (java.lang.Long.valueOf(u), java.lang.Long.valueOf(p), java.lang.Long.valueOf(m))
+    } else {
+      (null.asInstanceOf[java.lang.Long], null.asInstanceOf[java.lang.Long], null.asInstanceOf[java.lang.Long])
+    }
+
     println(s"[VALIDATION] $sourceName : lues = $totalRead | valides = $validCnt | rejetees = $rejectCnt | valeurs nulles = $nullCnt")
-    QualityMetrics(sourceName, totalRead, validCnt, rejectCnt, rejectPct, nullCnt)
+    QualityMetrics(sourceName, totalRead, validCnt, rejectCnt, rejectPct, nullCnt, uOrphans, pOrphans, mOrphans)
   }
 
-  /** Construit le DataFrame de synthèse du rapport de qualité. */
   def buildQualityReport(metrics: Seq[QualityMetrics])(implicit spark: SparkSession): DataFrame = {
     import spark.implicits._
-    metrics.toDF()
+    val reportDf = metrics.toDF()
+    reportDf.show(truncate = false)
+    reportDf
   }
 
-  /** Nombre de transactions dont la clé étrangère n'existe pas dans la table de référence. */
-  private def countOrphans(tx: DataFrame, reference: DataFrame, key: String): Long =
-    tx.select(key)
-      .join(reference.select(key).distinct(), Seq(key), "left_anti")
-      .count()
-
-  /** Ajoute les compteurs d'orphelins au rapport de qualité. */
-  def addReferentialCounters(
-    report: DataFrame,
-    rawTx: Dataset[Transaction],
-    rawUsers: Dataset[User],
-    rawProducts: Dataset[ProductItem],
-    rawMerchants: Dataset[Merchant]
-  ): DataFrame = {
-    val tx = rawTx.toDF()
-    val u = countOrphans(tx, rawUsers.toDF(), "user_id")
-    val p = countOrphans(tx, rawProducts.toDF(), "product_id")
-    val m = countOrphans(tx, rawMerchants.toDF(), "merchant_id")
-    println(s"[INTEGRITE] user_id orphelins = $u | product_id orphelins = $p | merchant_id orphelins = $m")
-
-    report
-      .withColumn("nb_user_id_orphelins", when(col("dataset") === "transactions", lit(u)))
-      .withColumn("nb_product_id_orphelins", when(col("dataset") === "transactions", lit(p)))
-      .withColumn("nb_merchant_id_orphelins", when(col("dataset") === "transactions", lit(m)))
-  }
-
-  /** Enregistre le rapport dans UN SEUL fichier CSV, sans dossier part-xxx. */
   def saveReportAsCsv(report: DataFrame, path: String): Unit = {
     val fichier = Paths.get(path)
     Option(fichier.getParent).foreach(dossier => Files.createDirectories(dossier))
     val entete  = report.columns.mkString(",")
-    val lignes  = report.collect().map(_.toSeq.map(v => if (v == null) "" else v.toString).mkString(",")).toList
+    val lignes  = report.collect().map(_.toSeq.map(v => if (v == null) "NULL" else v.toString).mkString(",")).toList
     val contenu = (entete :: lignes).mkString("\n") + "\n"
     Files.write(fichier, contenu.getBytes(StandardCharsets.UTF_8))
     println(s"[RAPPORT] enregistré dans $fichier")
   }
 
-  /** Vérifie l'intégrité référentielle et retourne les transactions valides vs orphelines. */
   def checkReferentialIntegrity(
     validTx: Dataset[Transaction],
     validUsers: Dataset[User],
