@@ -4,7 +4,11 @@ Ce projet transforme les quatre fichiers du groupe 3 en résultats métier : qua
 
 Groupe : **Fotsing Dominique** (A, parties 1, 2 et 7), **Faye Ibrahim** (B, partie 3), **Gadji Mahamat** (C, parties 4, 5 et 6). 
 
-Dépôt privé : [ecommerce-analytics-groupe-3](https://github.com/Fotsingsouop/spark-ecommerce-project). Le guide [TRAVAIL_EN_GROUPE.md](docs/TRAVAIL_EN_GROUPE.md) explique les fichiers attribués et la publication des contributions avec l'identité de chacun.
+Dépôt privé : https://github.com/Fotsingsouop/spark-ecommerce-project. 
+
+Le fichier EQUIPE.md explique les fichiers attribués.
+
+Le fichier CONTRIBUTION.md décrit le temps alloué par chaque, les difficultés, et les différentes contributions de chaque membre.
 
 Sur le poste où les outils portables sont déjà préparés, si `sbt` n'est pas reconnu, utilisez directement :
 
@@ -16,7 +20,8 @@ powershell -ExecutionPolicy Bypass -File .\scripts\sbt.ps1 compile
 Une transaction représente un achat. Elle contient les identifiants du client, du produit et du marchand. Le programme lit les quatre fichiers, vérifie les valeurs, rapproche les tables, puis calcule les statistiques. Spark répartit ce travail en partitions. Sur votre ordinateur, plusieurs tâches tournent dans la même machine avec local[2]. Sur un cluster, elles peuvent tourner sur plusieurs machines.
 Les données originales ont été copiées localement dans src/main/resources/data/. Le dépôt GitHub contient uniquement le code et la documentation : après un clone, ajoutez les données du devoir en suivant les instructions locales. Elles contiennent volontairement des anomalies. Les résultats vont dans output/. Une nouvelle exécution remplace les résultats portant le même nom. Pour conserver une expérience, choisissez un autre chemin de sortie dans la configuration.
 Parcours conseillé : installation, tests, ingestion seule, pipeline complet, lecture des résultats, puis préparation de l'explication orale. Ne cherchez pas à mémoriser tout le code avant votre première exécution.
-Des exemples issus d'une exécution réelle sont commentés dans RESULTATS_OBTENUS.md.
+
+
 2. Versions et prérequis
 Outil
 Version du projet
@@ -79,27 +84,21 @@ Invoke-WebRequest '[https://repo.maven.apache.org/maven2/org/scala-sbt/sbt-launc
 3. Ouvrir le bon dossier
 Dans PowerShell :
 
-
-
 PowerShell
 Set-Location 'C:\Users\FOTSING\Dropbox (Personal)\PC\Master DIT\BigData_DataEngIneering_Scala\Devoir\EcommerceAnalytics'
 Get-ChildItem
 
 
 Vous devez voir build.sbt, README.md et src. Les chemins de application.conf sont relatifs à ce dossier. Placez-vous toujours ici avant une commande SBT.
+
 4. Compiler et tester
-
-
 
 PowerShell
 sbt compile
 sbt test
 
-
 compile transforme les fichiers Scala en bytecode JVM. test vérifie le calendrier, les valeurs nulles, la conservation des rejets, les limites des fenêtres et la rétention. Les premières commandes peuvent durer plusieurs minutes pendant les téléchargements. Une fin avec [success] indique que SBT a terminé sans erreur.
 Avec le lanceur portable :
-
-
 
 PowerShell
 powershell -ExecutionPolicy Bypass -File .\scripts\sbt.ps1 compile
@@ -107,36 +106,27 @@ powershell -ExecutionPolicy Bypass -File .\scripts\sbt.ps1 test
 
 
 5. Première exécution : ingestion et qualité
-
-
-
 PowerShell
 sbt run
 
-
 Lisez les messages de validation et le tableau récapitulatif Quality Report. Pour chaque table, vérifiez :
-
-
 
 Plaintext
 nb_lignes_lues = nb_lignes_valides + nb_lignes_rejetees
 
-
 Un taux de rejet non nul est attendu sur ces fichiers. Chaque ligne rejetée ou validée est exportée en respectant rigoureusement son format d'origine (CSV pour les transactions/marchands, JSON pour les utilisateurs, Parquet pour les produits) sous output/rejected/ et output/valid/, avec affichage automatique des 5 premières lignes en console. Le motif décrit toutes les règles violées, séparées par ;.
 Le rapport de qualité final est quant à lui généré sous forme de fichier CSV unique (via java.nio, s'affranchissant de la structure de répertoires fragmentée part-xxx de Spark).
+
 6. Exécuter le projet complet
-
-
-
 PowerShell
 sbt run
-
 
 Sans argument, sbt run exécute le pipeline unifié complet. Les étapes successives réalisent :
 L'ingestion multi-format sécurisée.
 La validation des données (application des seuils configurés, calcul des métriques et dénombrement des orphelins de clés étrangères).
 L'export et l'aperçu des jeux de données valides et rejetés dans leurs formats respectifs.
 La vérification de l'intégrité référentielle et l'écriture des rapports finaux propres.
+
 7. Comprendre les sorties
 Chaque résultat et jeu de données intermédiaire respecte le format d'origine du fichier source ou est agrégé dans un fichier unique propre :
 Dossier ou Fichier sous output/
@@ -160,18 +150,10 @@ models/Transaction.scala, User.scala, ProductItem.scala et Merchant.scala défin
 DataIngestion.scala lit les différents formats (CSV, JSON, Parquet) de manière robuste.
 DataValidation.scala applique les règles métiers, sépare les lignes valides des rejets, calcule les métriques de qualité et prend en charge l'intégrité référentielle ainsi que l'écriture via Java NIO.
 MainApp.scala orchestre l'ensemble du processus, gère les aperçus console (5 premières lignes) et ferme proprement la SparkSession dans un bloc finally.
-9. Modifier la configuration
-Le fichier actif est src/main/resources/application.conf. Modifiez par exemple les seuils d'âge, les montants minimaux ou les chemins d'accès selon vos besoins, puis relancez.
-10. Dépannage
-Message ou symptôme
-Vérification
-java ou sbt introuvable
-Rouvrez PowerShell après installation et vérifiez le PATH
-Java 21 au lieu de 17
-Corrigez JAVA_HOME ou utilisez le JDK portable
-Erreur d'accès aux fichiers locaux Windows
-Assurez-vous que winutils.exe et hadoop.dll sont bien présents dans C:\hadoop\bin
-AccessDeniedException sur quality_report
-Vérifiez que le chemin de sortie pointe bien vers un fichier .csv et non vers un dossier bloquant
 
-État des vérifications réellement effectuées : VERIFICATION.md.
+9. Modifier la configuration
+Le fichier actif est src/main/resources/application.conf. Modifiez par exemple les seuils d'âge, les montants minimaux ou les chemins d'accès selon vos besoins, Assurez-vous que winutils.exe et hadoop.dll sont bien présents dans C:\hadoop\bin si c'est necessaire sur votre version de Windows, puis relancez.
+
+
+
+

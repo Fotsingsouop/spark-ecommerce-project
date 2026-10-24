@@ -1,0 +1,9 @@
+target/
+project/target/
+project/project/
+.idea/
+spark-warehouse/
+output/
+output_echantillon/
+*.log
+src/main/scala/com/ecommerce/sandbox/
