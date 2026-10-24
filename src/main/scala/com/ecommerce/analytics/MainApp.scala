@@ -1,6 +1,6 @@
 package com.ecommerce
 
-import com.ecommerce.config.AppConfig
+import com.ecommerce.utils.AppConfig
 import com.ecommerce.ingestion.{DataIngestion, DataValidation}
 import org.apache.spark.sql.SparkSession
 
@@ -9,7 +9,12 @@ object MainApp {
     val appConfig = AppConfig.load()
 
     // FORCE HADOOP TO LOAD LOCAL BINARIES PROGRAMMATICALLY
-    System.setProperty("hadoop.home.dir", "C:\\hadoop")
+    //System.setProperty("hadoop.home.dir", "C:\\hadoop")
+    // CONFIGURATION CONDITIONNELLE DE HADOOP (selon la machine)
+if (appConfig.spark.hadoopHomeDir != null && appConfig.spark.hadoopHomeDir.trim.nonEmpty) {
+      System.setProperty("hadoop.home.dir", appConfig.spark.hadoopHomeDir)
+      println(s"[INFO] Hadoop home configuré dynamiquement à : ${appConfig.spark.hadoopHomeDir}")
+    }
 
     implicit val spark: SparkSession = SparkSession.builder()
       .appName(appConfig.spark.appName)
@@ -20,7 +25,7 @@ object MainApp {
     spark.sparkContext.setLogLevel("ERROR")
 
     try {
-      println("=== STEP 1: Multi-Format Data Ingestion ===")
+      println("=== ETAPE 1: Multi-Format Data Ingestion ===")
       val rawTx        = DataIngestion.loadTransactions(appConfig.paths.transactions)
       val rawUsers     = DataIngestion.loadUsers(appConfig.paths.users)
       val rawProducts  = DataIngestion.loadProducts(appConfig.paths.products)
@@ -40,7 +45,7 @@ object MainApp {
       rawMerchants.show(5, truncate = false)
       // --------------------
 
-      println("=== STEP 2: Data Validation & Quality Report ===")
+      println("=== ETAPE 2: Data Validation & Quality Report ===")
       val txResult       = DataValidation.validateTransactions(rawTx, appConfig.validation)
       val userResult     = DataValidation.validateUsers(rawUsers, appConfig.validation)
       val productResult  = DataValidation.validateProducts(rawProducts, appConfig.validation)
@@ -78,7 +83,7 @@ object MainApp {
         merchantResult.valid
       )
 
-      println(s"\n[SUCCESS] Final clean transactions ready for Member B: ${refIntegrityResult.valid.count()} rows")
+      println(s"\n[SUCCESS] Fichiers nettoyés disponible pour Faye Ibrahim: ${refIntegrityResult.valid.count()} rows")
 
     } catch {
       case e: Exception =>

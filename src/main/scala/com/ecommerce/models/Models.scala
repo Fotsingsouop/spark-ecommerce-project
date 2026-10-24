@@ -52,5 +52,8 @@ case class QualityMetrics(
   nb_lignes_valides: Long,
   nb_lignes_rejetees: Long,
   taux_rejet: Double,
-  nb_valeurs_nulles: Long
+  nb_valeurs_nulles: Long,
+  orphan_user_refs: java.lang.Long,
+  orphan_product_refs: java.lang.Long,
+  orphan_merchant_refs: java.lang.Long
 )

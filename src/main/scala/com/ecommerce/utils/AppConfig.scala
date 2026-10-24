@@ -1,8 +1,8 @@
-package com.ecommerce.config
+package com.ecommerce.utils
 
 import com.typesafe.config.{Config, ConfigFactory}
 
-case class SparkConfig(appName: String, master: String, shufflePartitions: Int)
+case class SparkConfig(appName: String, master: String, shufflePartitions: Int, hadoopHomeDir: String)
 case class OutputPaths(baseDir: String, qualityReport: String, rejectedRecords: String, enrichedData: String, merchantKpis: String, cohortRetention: String)
 case class DataPaths(transactions: String, users: String, products: String, merchants: String, output: OutputPaths)
 case class OptimizationConfig(enableCache: Boolean, enableBroadcast: Boolean)
@@ -33,7 +33,8 @@ object AppConfig {
       spark = SparkConfig(
         conf.getString("spark.app-name"),
         conf.getString("spark.master"),
-        conf.getInt("spark.shuffle-partitions")
+        conf.getInt("spark.shuffle-partitions"),
+        hadoopHomeDir = if (conf.hasPath("app.spark.hadoop-home-dir")) conf.getString("app.spark.hadoop-home-dir") else ""
       ),
       paths = DataPaths(
         conf.getString("paths.transactions"),

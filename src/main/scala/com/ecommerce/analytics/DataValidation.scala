@@ -1,23 +1,11 @@
 package com.ecommerce.ingestion
 
-import com.ecommerce.config.ValidationConfig
+import com.ecommerce.utils.ValidationConfig
 import com.ecommerce.models._
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import org.apache.spark.sql.{Column, DataFrame, Dataset, SaveMode, SparkSession}
 import org.apache.spark.sql.functions._
-
-case class QualityMetrics(
-  dataset: String,
-  nb_lignes_lues: Long,
-  nb_lignes_valides: Long,
-  nb_lignes_rejetees: Long,
-  taux_rejet: Double,
-  nb_valeurs_nulles: Long,
-  orphan_user_refs: java.lang.Long,
-  orphan_product_refs: java.lang.Long,
-  orphan_merchant_refs: java.lang.Long
-)
 
 object DataValidation {
 
@@ -143,24 +131,35 @@ object DataValidation {
   }
 
   // --- EXPORTS FORMAT JSON (Users) ---
+
   def saveValidAsJson[T](validDs: Dataset[T], path: String, datasetName: String)(implicit spark: SparkSession): Unit = {
     import spark.implicits._
     val validDf = validDs.toDF()
     println(s"\n[VALIDES] --- APERÇU (5 premières lignes propres : $datasetName) ---")
     validDf.show(5, truncate = false)
 
-    validDf.write.mode(SaveMode.Overwrite).json(path)
-    println(s"[VALIDES] Export JSON enregistré dans $path")
+    val jsonLines = validDs.toJSON.collect().toList
+    val contenu = jsonLines.mkString("\n") + (if (jsonLines.nonEmpty) "\n" else "")
+
+    val fichier = Paths.get(path)
+    Option(fichier.getParent).foreach(Files.createDirectories(_))
+    Files.write(fichier, contenu.getBytes(StandardCharsets.UTF_8))
+    println(s"[VALIDES] Export JSON propre enregistré dans $fichier")
   }
 
-  def saveRejectedAsJson(rejectedDf: DataFrame, path: String, datasetName: String): Unit = {
+  def saveRejectedAsJson(rejectedDf: DataFrame, path: String, datasetName: String)(implicit spark: SparkSession): Unit = {
+    import spark.implicits._
     println(s"\n[REJET] --- APERÇU (5 premières lignes rejetées : $datasetName) ---")
     rejectedDf.show(5, truncate = false)
 
-    rejectedDf.write.mode(SaveMode.Overwrite).json(path)
-    println(s"[REJET] Export JSON enregistré dans $path")
-  }
+    val jsonLines = rejectedDf.toJSON.collect().toList
+    val contenu = jsonLines.mkString("\n") + (if (jsonLines.nonEmpty) "\n" else "")
 
+    val fichier = Paths.get(path)
+    Option(fichier.getParent).foreach(Files.createDirectories(_))
+    Files.write(fichier, contenu.getBytes(StandardCharsets.UTF_8))
+    println(s"[REJET] Export JSON rejeté enregistré dans $fichier")
+  }
   // --- EXPORTS FORMAT PARQUET (Products) ---
   def saveValidAsParquet[T](validDs: Dataset[T], path: String, datasetName: String)(implicit spark: SparkSession): Unit = {
     import spark.implicits._
@@ -271,7 +270,7 @@ object DataValidation {
     val cleanTx = joined.filter(col("rejection_reason") === "").drop("rejection_reason").as[Transaction]
     val orphanTx = joined.filter(col("rejection_reason") =!= "")
 
-    println("\n--- [BONUS] Rapport d'intégrité référentielle ---")
+    println("\n--- [Question 2.5 BONUS] Rapport d'intégrité référentielle ---")
     orphanTx.groupBy("rejection_reason").count().show(truncate = false)
 
     ValidationResult(cleanTx, orphanTx)

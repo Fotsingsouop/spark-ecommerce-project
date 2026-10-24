@@ -1,4 +1,13 @@
-[0m[[0m[31merror[0m] [0m[0mC:\Users\FOTSING\Dropbox (Personal)\PC\Master DIT\BigData_DataEngIneering_Scala\Projet\spark-ecommerce-project\src\main\scala\com\ecommerce\analytics\MainApp.scala:57:22: value generateQualityReport is not a member of object com.ecommerce.ingestion.DataValidation[0m
-[0m[[0m[31merror[0m] [0m[0m      DataValidation.generateQualityReport(metrics, appConfig.paths.output.qualityReport)[0m
-[0m[[0m[31merror[0m] [0m[0m                     ^[0m
-[0m[[0m[31merror[0m] [0m[0mone error found[0m
+[0m[[0m[31merror[0m] [0m[0mC:\Users\FOTSING\Dropbox (Personal)\PC\Master DIT\BigData_DataEngIneering_Scala\Projet\spark-ecommerce-project\src\main\scala\com\ecommerce\analytics\MainApp.scala:14:15: value hadoopHomeDir is not a member of com.ecommerce.utils.AppConfig[0m
+[0m[[0m[31merror[0m] [0m[0mif (appConfig.hadoopHomeDir != null && appConfig.hadoopHomeDir.trim.nonEmpty) {[0m
+[0m[[0m[31merror[0m] [0m[0m              ^[0m
+[0m[[0m[31merror[0m] [0m[0mC:\Users\FOTSING\Dropbox (Personal)\PC\Master DIT\BigData_DataEngIneering_Scala\Projet\spark-ecommerce-project\src\main\scala\com\ecommerce\analytics\MainApp.scala:14:50: value hadoopHomeDir is not a member of com.ecommerce.utils.AppConfig[0m
+[0m[[0m[31merror[0m] [0m[0mif (appConfig.hadoopHomeDir != null && appConfig.hadoopHomeDir.trim.nonEmpty) {[0m
+[0m[[0m[31merror[0m] [0m[0m                                                 ^[0m
+[0m[[0m[31merror[0m] [0m[0mC:\Users\FOTSING\Dropbox (Personal)\PC\Master DIT\BigData_DataEngIneering_Scala\Projet\spark-ecommerce-project\src\main\scala\com\ecommerce\analytics\MainApp.scala:15:51: value hadoopHomeDir is not a member of com.ecommerce.utils.AppConfig[0m
+[0m[[0m[31merror[0m] [0m[0m  System.setProperty("hadoop.home.dir", appConfig.hadoopHomeDir)[0m
+[0m[[0m[31merror[0m] [0m[0m                                                  ^[0m
+[0m[[0m[31merror[0m] [0m[0mC:\Users\FOTSING\Dropbox (Personal)\PC\Master DIT\BigData_DataEngIneering_Scala\Projet\spark-ecommerce-project\src\main\scala\com\ecommerce\analytics\MainApp.scala:16:72: value hadoopHomeDir is not a member of com.ecommerce.utils.AppConfig[0m
+[0m[[0m[31merror[0m] [0m[0m  println(s"[INFO] Hadoop home configuré dynamiquement à : ${appConfig.hadoopHomeDir}")[0m
+[0m[[0m[31merror[0m] [0m[0m                                                                       ^[0m
+[0m[[0m[31merror[0m] [0m[0mfour errors found[0m
