@@ -26,7 +26,7 @@ Centralisation et lecture dynamique de la configuration Hadoop : Le déplacement
 
 ### Membre B – Ibrahima
 
-* Charge estimée : 25 heures
+* Charge estimée : 27 heures
 * Difficultés : installation de Spark et de sbt sous Windows (réseau d'entreprise, versions de Java) ; compatibilité des versions Scala (2.12 contre 2.13) avec `spark-submit` ; affichage des accents dans la console Windows (problème d'affichage uniquement, les données sont correctes) ; dates invalides (700 timestamps inexploitables) : l'UDF renvoie un `Option`, donc une valeur nulle au lieu d'une erreur, avec un parsing strict (le 31 février est refusé) ; compréhension des fenêtres glissantes (`rangeBetween` en secondes pour de vrais 7 jours) et contournement de `countDistinct`, interdit dans une fenêtre, par `size(collect\_set(...))` ; ambiguïtés du sujet (âge de 25 ans, bornes de `is\_working\_hours`) ; alignement des modèles de données et de la configuration des trois membres sur une base commune ; nettoyage du dépôt Git partagé (`.git` de près de 200 Mo à moins de 4 Mo) ; collaboration à distance avec des fuseaux horaires différents.
 
 ### Membre C – Mahamat
@@ -82,15 +82,16 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 
 |Commit|Contenu|Date|
 |-|-|-|
-|024e2a4|Ajout de l'UDF extractTimeFeatures (question 3.1)|20/10/2026|
-|7fd7c05|Ajout de enrichTransactionData : jointures, UDF, rang et tranche d'age (question 3.2)|20/10/2026|
-|57930b3|Ajout des fenetres glissantes 7 jours, utilisateur actif et delai entre achats (question 3.3)|21/10/2026|
-|d5972ef|Ajout de la detection des transactions suspectes (bonus 3.4)|21/10/2026|
-|166117c|Ajout du broadcast optionnel dans les jointures d'enrichissement (question 5.2)|21/10/2026|
-|cf22c39|Ajout du .gitignore (target, output, .idea) et nettoyage de l'historique (commit collectif)|22/10/2026|
-|b0db5a9|Ajout de l'affichage du top 20 des transactions suspectes (question 3.4)|22/10/2026|
+|5eacdbf|Ajout de l'UDF extractTimeFeatures (question 3.1)|20/10/2026|
+|4ef0546|Ajout de enrichTransactionData : jointures, UDF, rang et tranche d'age (question 3.2)|20/10/2026|
+|27df720|Ajout des fenetres glissantes 7 jours, utilisateur actif et delai entre achats (question 3.3)|21/10/2026|
+|bc07cf4|Ajout de la detection des transactions suspectes (bonus 3.4)|21/10/2026|
+|b31c3a4|Ajout du broadcast optionnel dans les jointures d'enrichissement (question 5.2)|21/10/2026|
+|c274764|Ajout de l'affichage du top 20 des transactions suspectes (question 3.4)|22/10/2026|
+|347274a|Partie 3 : DataTransformation autonome et point d'entree TransformationDemo|24/10/2026|
+|e7cafe6|TransformationDemo : adaptation au package utils|24/10/2026|
 
-Le dépôt partagé a été nettoyé le 22/10/2026 : les dossiers `target/` et `output/`, commités par erreur dans les premiers commits, faisaient peser `.git` près de 200 Mo (impossible à envoyer par e-mail). Ils ont été retirés de l'historique (`git filter-branch`), qui pèse maintenant moins de 4 Mo. Les commits de Dominique ont été conservés avec leur auteur, leur date et leur message ; seuls leurs identifiants (hashes) ont changé.
+Les huit commits ci-dessus ne touchent que les fichiers de la partie 3 (`TimeFeatures.scala`, `DataTransformation.scala`, `TransformationDemo.scala`). Le 24/10/2026, ils ont été rejoués par-dessus l'historique du dépôt partagé (`git cherry-pick`), ce qui explique leurs identifiants différents de ceux du journal précédent ; leur auteur, leur date et leur message sont conservés.
 
 ## 7\. Résultats de contrôle (données validées)
 
