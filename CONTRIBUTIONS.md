@@ -93,9 +93,22 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 |e7cafe6|TransformationDemo : adaptation au package utils|24/10/2026|
 |cd89c6c|Partie 3 : corrections suite a la relecture de Dominique (seuils dans application.conf, raisons de suspicion, categorie INCONNU a l'affichage)|26/10/2026|
 |6c593e9|Partie 4 : Analytics (rapport par marchand, cohortes de retention) et AnalyticsDemo|26/10/2026|
-|6c593e9|Partie 5 : Implementation des optimisations et mesure des gains|26/10/2026|
-|6c593e9|Partie 6 : Implementation de l'application principale|26/10/2026|
-|6c593e9|Mise à jour des fichiers readme et contributions|26/10/2026|
+
+
+Commit Dominique
+Date	Mise à jour	Code (Hash)26/10/2026	Mise à jour de la section Historique Git	682d833
+|26/10/2026|Mise à jour des optimisations|f5be7ff|
+|24/10/2026|Mise à jour des fichiers CONTRIBUTIONS.md et README.md|7f64c67|
+|24/10/2026|Création du fichier README.md|1a8216d|
+|23/10/2026|Mise à jour du script de qualité des données pour inclure les fichiers de sortie propres et vérifier la conformité des types de données|6863abe|
+|22/10/2026|Intégration des commentaires du relecteur membre B (Ibrahima Faye)|0aa6232|
+|21/10/2026|Mise à jour de MainApp : amélioration de la méthode getDouble et ajout de l'affichage des 5 premières lignes de chaque dataset chargé|96e23d0|
+|20/10/2026|Réorganisation des fichiers DataIngestion.scala et DataValidation.scala|9e25b70|
+|20/10/2026|Ajout de Models.scala (description des datasets) et de DataIngestion.scala (lecture des datasets)|d41480c|
+|20/10/2026|Ajout des fichiers de configuration application.conf et AppConfig.scala|989bed7|
+|20/10/2026|Commit initial : création de build.sbt, build.properties et plugins.sbt|697534c|
+
+
 
 Les commits de la partie 3 ne touchent que `TimeFeatures.scala`, `DataTransformation.scala`, `TransformationDemo.scala` et `application.conf` (bloc des seuils) ; le dernier commit ajoute `Analytics.scala` et `AnalyticsDemo.scala` (partie 4). Le 24/10/2026, les huit premiers commits ont été rejoués par-dessus l'historique du dépôt partagé (`git cherry-pick`), ce qui explique leurs identifiants différents de ceux du journal précédent ; leur auteur, leur date et leur message sont conservés.
 
