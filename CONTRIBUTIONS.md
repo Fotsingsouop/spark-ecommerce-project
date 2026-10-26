@@ -93,6 +93,9 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 |e7cafe6|TransformationDemo : adaptation au package utils|24/10/2026|
 |cd89c6c|Partie 3 : corrections suite a la relecture de Dominique (seuils dans application.conf, raisons de suspicion, categorie INCONNU a l'affichage)|26/10/2026|
 |6c593e9|Partie 4 : Analytics (rapport par marchand, cohortes de retention) et AnalyticsDemo|26/10/2026|
+|6c593e9|Partie 5 : Implementation des optimisations et mesure des gains|26/10/2026|
+|6c593e9|Partie 6 : Implementation de l'application principale|26/10/2026|
+|6c593e9|Mise à jour des fichiers readme et contributions|26/10/2026|
 
 Les commits de la partie 3 ne touchent que `TimeFeatures.scala`, `DataTransformation.scala`, `TransformationDemo.scala` et `application.conf` (bloc des seuils) ; le dernier commit ajoute `Analytics.scala` et `AnalyticsDemo.scala` (partie 4). Le 24/10/2026, les huit premiers commits ont été rejoués par-dessus l'historique du dépôt partagé (`git cherry-pick`), ce qui explique leurs identifiants différents de ceux du journal précédent ; leur auteur, leur date et leur message sont conservés.
 
