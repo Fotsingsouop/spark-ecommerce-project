@@ -8,7 +8,7 @@
 |Partie 1|Structure SBT, build.sbt, README|A (Dominique)|C (Mahamat)|
 |Partie 2 (2.1 à 2.5)|Ingestion, validation, rapport de qualité, intégrité référentielle (bonus 2.5 traité)|A (Dominique)|B (Ibrahima)|
 |Partie 3 (3.1 à 3.4)|UDF temporelle, enrichissement, fenêtres, transactions suspectes (bonus 3.4 traité)|B (Ibrahima)|A (Dominique)|
-|Partie 4 (4.1 et 4.2)|KPI marchands, rétention par cohortes|C (Mahamat)|B (Ibrahima)|
+|Partie 4 (4.1 et 4.2)|KPI marchands, rétention par cohortes (reprise par Ibrahima le 26/10/2026, la partie de Mahamat n'ayant pas été livrée)|B (Ibrahima), initialement C (Mahamat)|A (Dominique)|
 |Partie 5 (5.1 à 5.3)|Cache, broadcast, mesures avant/après|C (Mahamat)|A (Dominique) et B (Ibrahima)|
 |Partie 6 (6.1 et 6.2)|Application principale, mesure des durées|C (Mahamat)|Intégration validée par A, B et C|
 |Partie 7|application.conf|A (Dominique)|C (Mahamat)|
@@ -45,7 +45,7 @@ Centralisation et lecture dynamique de la configuration Hadoop : Le déplacement
 7. **Tranches d'âge : 25 ans range dans « Adulte » (25 à 44).** Le sujet définit « moins de 25 » et « 26 à 44 », ce qui laisse l'âge 25 sans tranche.
 8. **`is\_working\_hours` : 1 pour 9h ≤ heure < 17h.** Le sujet dit « entre 9h et 17h » ; 17h00 est la fin de la journée de travail. Les noms de jours et de mois sont en anglais, comme `day\_period`. Les heures de 22h à 5h59 sont classées « Night ».
 9. **Fenêtre glissante de 7 jours : de (t − 7 jours) à t, transaction courante incluse**, la même pour le montant cumulé et pour l'utilisateur actif (jours distincts via `size(collect\_set(date))`, car `countDistinct` est interdit dans une fenêtre). Le délai entre achats utilise `lag` et `datediff` (en jours entiers) ; il est `null` pour la première transaction d'un utilisateur.
-10. **Panier moyen d'un utilisateur : moyenne de toutes ses transactions validées** (la transaction courante comprise). Une transaction est suspecte quand au moins 2 des 4 conditions sont réunies (montant supérieur à 4 fois le panier moyen, période « Night », délai inférieur à 5 minutes, paiement `CRYPTO`).
+10. **Panier moyen d'un utilisateur : moyenne de toutes ses transactions validées** (la transaction courante comprise). Une transaction est suspecte quand au moins 2 des 4 conditions sont réunies (montant supérieur à 4 fois le panier moyen, période « Night », délai inférieur à 5 minutes, paiement `CRYPTO`). Ces seuils sont lus dans `application.conf` (bloc `app.transformation`, valeurs par défaut dans le code) ; l'affichage du top 20 indique le nombre de conditions et les raisons.
 11. **KPI marchands : seuls les marchands connus sont analysés.** Les transactions dont le marchand est orphelin (250) n'ont ni catégorie ni région ni commission : elles sont exclues du calcul des KPI, mais restent dans les transactions enrichies. Le résultat compte 586 marchands, soit les marchands valides.
 12. **Rétention par cohortes : revenu moyen par utilisateur calculé sur la taille initiale de la cohorte.** `avg\_revenue\_per\_user` est le revenu de la période divisé par la taille de la cohorte, et non par le nombre d'actifs de la période, ce qui rend les périodes comparables entre elles. La cohorte d'un utilisateur est le mois de sa première transaction ; `period\_index` compte les mois écoulés depuis ce mois.
 13. **Cache : `persist(MEMORY\_AND\_DISK\_SER)` sur le DataFrame enrichi, `cache()` sur les petits résultats.** Le DataFrame enrichi est le plus gros et il est réutilisé pour les KPI, les cohortes et deux écritures. La sérialisation et le repli sur disque évitent de saturer la mémoire d'un poste local. Tous les caches sont libérés (`unpersist`) en fin d'exécution, dans le bloc `finally`, avec l'arrêt de la session Spark.
@@ -72,13 +72,13 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 |-|-|-|-|-|
 |20/10/2026|Partie 2 (première version : ingestion, validation, rapport)|Dominique|Ibrahima|Code exécuté sous Windows (Java 11, sbt 1.9.8) : les quatre sources se chargent avec les bons volumes (600, 138 047, 12 000, 6 000). Corrections proposées : erreur `$"coalesce"(...)` remplacée par `coalesce(...)` ; lignes rejetées conservées avec leur motif (DataFrame) ; âge en `Int` au lieu de `BigInt` ; ajout du comptage des nulles.|
 |21/10/2026|Partie 2 (deuxième version)|Dominique|Ibrahima|Version exécutée avec les mêmes chiffres de validation que mes calculs de contrôle (586, 136 157, 11 655 valides pour merchants, transactions, users). Corrections proposées pour respecter le sujet : placement des fichiers dans `analytics`, `models` et `utils` ; valeur par défaut des clés de configuration (7.1) ; note entre 1 et 5 (et non 0 à 5) ; try-catch par fichier avec nombre de lignes lues (2.3) ; colonne `dataset` du rapport (2.4) ; rapport écrit en un seul fichier CSV ; trois compteurs d'orphelins ajoutés au rapport (2.5) ; suppression du chemin `C:\\hadoop` écrit en dur ; passage de `reference.conf` en `concat` dans la configuration d'assembly.|
-|<à compléter>|Partie 3 (UDF, enrichissement, fenêtres, suspectes)|Ibrahima|Dominique|<à compléter par Dominique>|
-|<à compléter>|Partie 4 (KPI marchands, cohortes)|Mahamat|Ibrahima|<à compléter>|
+|26/10/2026|Partie 3 (UDF, enrichissement, fenêtres, suspectes)|Ibrahima|Dominique|Code relu et jugé « excellent » avec trois points à revoir. (1) Seuils de `detectSuspicious` (facteur 4 du panier moyen, 300 secondes) en dur : déplacés dans `application.conf`, bloc `app.transformation`, avec valeurs par défaut dans le code. (2) Mode de paiement autre que `CRYPTO` dans le top 20 : ce n'est pas une erreur, une transaction est suspecte avec 2 conditions sur 4 et `CRYPTO` n'en est qu'une ; colonnes `nb_conditions` et `suspicion_raisons` ajoutées à l'affichage. (3) Catégorie de marchand `null` après le `LEFT JOIN` : affichée `INCONNU` dans le top 20 (affichage seulement, les données gardent `null`). Corrections dans le commit cd89c6c.|
+|<à compléter>|Partie 4 (KPI marchands, cohortes)|Ibrahima (reprise de la partie de Mahamat)|Dominique|<à compléter par Dominique>|
 |<à compléter>|Partie 5 (optimisations)|Mahamat|Dominique et Ibrahima|<à compléter>|
 |<à compléter>|Partie 1 et Partie 7 (build.sbt, README, configuration)|Dominique|Mahamat|<à compléter par Mahamat>|
 |<à compléter>|Partie 6 (application principale)|Mahamat|Dominique, Ibrahima, Mahamat|<à compléter>|
 
-## 6\. Historique Git de la partie B (Ibrahima)
+## 6\. Historique Git de Ibrahima (partie 3, puis partie 4 reprise)
 
 |Commit|Contenu|Date|
 |-|-|-|
@@ -90,8 +90,10 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 |c274764|Ajout de l'affichage du top 20 des transactions suspectes (question 3.4)|22/10/2026|
 |347274a|Partie 3 : DataTransformation autonome et point d'entree TransformationDemo|24/10/2026|
 |e7cafe6|TransformationDemo : adaptation au package utils|24/10/2026|
+|cd89c6c|Partie 3 : corrections suite a la relecture de Dominique (seuils dans application.conf, raisons de suspicion, categorie INCONNU a l'affichage)|26/10/2026|
+|6c593e9|Partie 4 : Analytics (rapport par marchand, cohortes de retention) et AnalyticsDemo|26/10/2026|
 
-Les huit commits ci-dessus ne touchent que les fichiers de la partie 3 (`TimeFeatures.scala`, `DataTransformation.scala`, `TransformationDemo.scala`). Le 24/10/2026, ils ont été rejoués par-dessus l'historique du dépôt partagé (`git cherry-pick`), ce qui explique leurs identifiants différents de ceux du journal précédent ; leur auteur, leur date et leur message sont conservés.
+Les commits de la partie 3 ne touchent que `TimeFeatures.scala`, `DataTransformation.scala`, `TransformationDemo.scala` et `application.conf` (bloc des seuils) ; le dernier commit ajoute `Analytics.scala` et `AnalyticsDemo.scala` (partie 4). Le 24/10/2026, les huit premiers commits ont été rejoués par-dessus l'historique du dépôt partagé (`git cherry-pick`), ce qui explique leurs identifiants différents de ceux du journal précédent ; leur auteur, leur date et leur message sont conservés.
 
 ## 7\. Résultats de contrôle (données validées)
 

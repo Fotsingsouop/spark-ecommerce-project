@@ -23,19 +23,19 @@ class Analytics(spark: SparkSession) {
 
   /** Une ligne par marchand : CA, nb transactions, clients uniques, montant moyen, commission,
     * CA par tranche d'age, taux de transactions suspectes, rang par categorie et par region.
-    * Un marchand sans categorie ou sans region dans le fichier de reference est range dans "INCONNU".
+    * Seuls les marchands connus du fichier de reference sont analyses (decision 11 de CONTRIBUTIONS.md) :
+    * une transaction dont le marchand est orphelin n'a ni categorie, ni region, ni commission.
     */
   def merchantReport(df: DataFrame): DataFrame = {
 
-    // 1. On prepare les colonnes : commission de la transaction et libelles "INCONNU"
+    // 1. On garde les marchands connus et on calcule la commission de chaque transaction
     val base = df
+      .filter(col("merchant_category").isNotNull)
       .withColumn("commission", col("amount") * col("commission_rate"))
-      .withColumn("categorie", coalesce(col("merchant_category"), lit("INCONNU")))
-      .withColumn("region", coalesce(col("merchant_region"), lit("INCONNU")))
 
     // 2. Les KPI par marchand (groupBy + agg, comme en cours)
     val kpi = base
-      .groupBy("merchant_id", "merchant_name", "categorie", "region")
+      .groupBy("merchant_id", "merchant_name", "merchant_category", "merchant_region")
       .agg(
         round(sum("amount"), 2).as("chiffre_affaires"),
         count("transaction_id").as("nb_transactions"),
@@ -52,14 +52,12 @@ class Analytics(spark: SparkSession) {
         round(avg("is_suspicious") * 100, 2).as("taux_suspects_pct"))
 
     // 3. Classement par CA dans la categorie, puis dans la region (fonctions de fenetrage)
-    val parCategorie = Window.partitionBy("categorie").orderBy(col("chiffre_affaires").desc)
-    val parRegion = Window.partitionBy("region").orderBy(col("chiffre_affaires").desc)
+    val parCategorie = Window.partitionBy("merchant_category").orderBy(col("chiffre_affaires").desc)
+    val parRegion = Window.partitionBy("merchant_region").orderBy(col("chiffre_affaires").desc)
 
     kpi
       .withColumn("rang_categorie", rank().over(parCategorie))
       .withColumn("rang_region", rank().over(parRegion))
-      .withColumnRenamed("categorie", "merchant_category")
-      .withColumnRenamed("region", "merchant_region")
       .orderBy(col("chiffre_affaires").desc)
   }
 
@@ -79,7 +77,7 @@ class Analytics(spark: SparkSession) {
 
   /** Matrice de retention : une ligne par couple (cohort_month, period_index).
     * Colonnes : taille_cohorte, utilisateurs_actifs, taux_retention_pct,
-    * et (bonus) ca_cohorte et revenu_moyen_par_utilisateur.
+    * et (bonus) ca_cohorte et avg_revenue_per_user.
     */
   def cohortAnalysis(df: DataFrame): DataFrame = {
 
@@ -118,11 +116,12 @@ class Analytics(spark: SparkSession) {
       .join(tailles, Seq("cohort_month"))
       .withColumn("taux_retention_pct",
         round(col("utilisateurs_actifs") * 100 / col("taille_cohorte"), 2))
-      .withColumn("revenu_moyen_par_utilisateur",
-        round(col("ca_cohorte") / col("utilisateurs_actifs"), 2))
+      // revenu moyen par utilisateur de la cohorte (taille initiale), decision 12 de CONTRIBUTIONS.md
+      .withColumn("avg_revenue_per_user",
+        round(col("ca_cohorte") / col("taille_cohorte"), 2))
       .withColumn("cohort_month", date_format(col("cohort_month"), "yyyy-MM"))
       .select("cohort_month", "taille_cohorte", "period_index", "utilisateurs_actifs",
-        "taux_retention_pct", "ca_cohorte", "revenu_moyen_par_utilisateur")
+        "taux_retention_pct", "ca_cohorte", "avg_revenue_per_user")
       .orderBy("cohort_month", "period_index")
   }
 
