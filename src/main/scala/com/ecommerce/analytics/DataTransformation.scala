@@ -3,8 +3,37 @@ package com.ecommerce.analytics
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
+import com.typesafe.config.ConfigFactory
 
-class DataTransformation(spark: SparkSession) {
+/** Seuils de la partie 3. Ils sont lus dans application.conf (bloc app.transformation).
+  * Si une cle est absente, la valeur par defaut ci-dessous est utilisee.
+  */
+case class SeuilsTransformation(
+  multiplicateurMontant: Double,   // montant suspect si > multiplicateur x panier moyen de l'utilisateur
+  delaiRapideSecondes: Long,       // achat "rapide" si moins de N secondes apres le precedent
+  nbConditionsMin: Int,            // transaction suspecte si au moins N conditions sur 4
+  joursFenetre: Int,               // taille de la fenetre glissante, en jours
+  joursActifsMin: Int)             // utilisateur actif si au moins N jours distincts dans la fenetre
+
+object SeuilsTransformation {
+  val defaut: SeuilsTransformation = SeuilsTransformation(4.0, 300L, 2, 7, 5)
+
+  def charger(): SeuilsTransformation = {
+    val conf = ConfigFactory.load()
+    val racine = "app.transformation"
+    def lire[T](cle: String, valeurParDefaut: T)(lecture: String => T): T =
+      if (conf.hasPath(s"$racine.$cle")) lecture(s"$racine.$cle") else valeurParDefaut
+
+    SeuilsTransformation(
+      lire("amount-multiplier", defaut.multiplicateurMontant)(conf.getDouble),
+      lire("fast-purchase-seconds", defaut.delaiRapideSecondes)(conf.getLong),
+      lire("min-conditions", defaut.nbConditionsMin)(conf.getInt),
+      lire("window-days", defaut.joursFenetre)(conf.getInt),
+      lire("active-days-min", defaut.joursActifsMin)(conf.getInt))
+  }
+}
+
+class DataTransformation(spark: SparkSession, seuils: SeuilsTransformation = SeuilsTransformation.charger()) {
 
   /** Hint broadcast sur une petite table de reference, si l'option est activee. */
   private def broadcastIf(df: DataFrame, actif: Boolean): DataFrame =
@@ -62,7 +91,7 @@ class DataTransformation(spark: SparkSession) {
   /** Montant sur 7 jours glissants, utilisateur actif, delai depuis la transaction precedente. */
   def addBehaviorFeatures(df: DataFrame): DataFrame = {
     val secondes = col("transaction_time").cast("long")
-    val septJours = 7L * 24 * 3600
+    val septJours = seuils.joursFenetre.toLong * 24 * 3600
 
     // Fenetre glissante : de (t - 7 jours) jusqu'a t, pour un meme utilisateur
     val fenetre7j = Window.partitionBy("user_id").orderBy(secondes)
@@ -73,7 +102,7 @@ class DataTransformation(spark: SparkSession) {
     df.withColumn("date_jour", to_date(col("transaction_time")))
       .withColumn("amount_7d", round(sum("amount").over(fenetre7j), 2))
       .withColumn("active_days_7d", size(collect_set(col("date_jour")).over(fenetre7j)))
-      .withColumn("is_active_user", when(col("active_days_7d") >= 5, 1).otherwise(0))
+      .withColumn("is_active_user", when(col("active_days_7d") >= seuils.joursActifsMin, 1).otherwise(0))
       .withColumn("days_since_previous",
         datediff(col("date_jour"), lag("date_jour", 1).over(ordonnee)))
   }
@@ -88,21 +117,33 @@ class DataTransformation(spark: SparkSession) {
       .withColumn("basket_gap_pct",
         round((col("amount") - col("avg_user_amount")) * 100 / col("avg_user_amount"), 2))
       .withColumn("seconds_since_previous", secondes - lag(secondes, 1).over(ordonnee))
-      .withColumn("cond_high_amount", when(col("amount") > col("avg_user_amount") * 4, 1).otherwise(0))
+      .withColumn("cond_high_amount", when(col("amount") > col("avg_user_amount") * seuils.multiplicateurMontant, 1).otherwise(0))
       .withColumn("cond_night", when(col("day_period") === "Night", 1).otherwise(0))
-      .withColumn("cond_fast", when(col("seconds_since_previous") < 300, 1).otherwise(0))
+      .withColumn("cond_fast", when(col("seconds_since_previous") < seuils.delaiRapideSecondes, 1).otherwise(0))
       .withColumn("cond_crypto", when(col("payment_method") === "CRYPTO", 1).otherwise(0))
-      .withColumn("is_suspicious",
-        when(col("cond_high_amount") + col("cond_night") + col("cond_fast") + col("cond_crypto") >= 2, 1)
-          .otherwise(0))
+      .withColumn("nb_conditions",
+        col("cond_high_amount") + col("cond_night") + col("cond_fast") + col("cond_crypto"))
+      .withColumn("suspicion_raisons",
+        concat_ws("+",
+          when(col("cond_high_amount") === 1, lit("MONTANT_ELEVE")),
+          when(col("cond_night") === 1, lit("NUIT")),
+          when(col("cond_fast") === 1, lit("RAPIDE")),
+          when(col("cond_crypto") === 1, lit("CRYPTO"))))
+      .withColumn("is_suspicious", when(col("nb_conditions") >= seuils.nbConditionsMin, 1).otherwise(0))
   }
 
-    /** Affiche les 20 transactions suspectes avec les montants les plus élevés. */
+  /** Affiche les 20 transactions suspectes avec les montants les plus eleves et les raisons du signalement.
+    * Une transaction est suspecte avec au moins 2 conditions sur 4 : le mode de paiement CRYPTO n'est donc
+    * qu'une des raisons possibles. Pour la lisibilite, une categorie de marchand absente est affichee "INCONNU"
+    * (affichage seulement : les donnees enrichies gardent la valeur null).
+    */
   def showTopSuspicious(df: DataFrame): Unit = {
     println("=== TOP 20 DES TRANSACTIONS SUSPECTES (montants les plus élevés)")
     df.filter(col("is_suspicious") === 1)
       .orderBy(col("amount").desc)
-      .select("transaction_id", "user_id", "amount", "day_period", "payment_method", "merchant_category")
+      .select(col("transaction_id"), col("user_id"), col("amount"), col("day_period"), col("payment_method"),
+        coalesce(col("merchant_category"), lit("INCONNU")).as("merchant_category"),
+        col("nb_conditions"), col("suspicion_raisons"))
       .show(20, false)
   }
  
