@@ -6,9 +6,11 @@ Projet final Spark & Scala : système d'analyse de données e-commerce.
 
 | Rôle | Nom et prénom | E-mail | Nom Git (`git config user.name`) |
 |---|---|---|---|
-| Membre A – Data Ingestion & Platform Engineer | FOTSING SOUOP Dominique | <à compléter par Dominique> | Fotsing Souop |
+| Membre A – Data Ingestion & Platform Engineer | FOTSING SOUOP Dominique | dominique.fotsing@mail.dit.sn | Fotsing Souop |
 | Membre B – Data Transformation Engineer | FAYE Ibrahima | westafricafarmsitofficer@gmail.com | Ibrahima Faye |
-| Membre C – Analytics & Performance Engineer | GADJI Mahamat | <à compléter par Mahamat> | <à compléter par Mahamat> |
+| Membre C – Analytics & Performance Engineer | FAYE Ibrahima (partie 4) / FOTSING SOUOP Dominique (parties 5 et 6) | westafricafarmsitofficer@gmail.com / dominique.fotsing@mail.dit.sn | Ibrahima Faye / Fotsing Souop |
+
+Note : GADJI Mahamat, initialement membre C, n'a pas participé au projet. Ses parties 4, 5 et 6 ont été reprises le 26/10/2026 par Ibrahima (partie 4) et Dominique (parties 5 et 6), qui forment donc le membre C.
 
 ## Questions traitées par chacun
 
@@ -23,10 +25,10 @@ Projet final Spark & Scala : système d'analyse de données e-commerce.
 - 3.3 : fonctions de fenêtrage (montant cumulé sur 7 jours, utilisateur actif, délai entre achats)
 - 3.4 (bonus) : détection de transactions suspectes
 
-### Membre C – Mahamat (Parties 4, 5 et 6)
-- Partie 4 : 4.1 (KPI par marchand), 4.2 (cohortes et rétention)
-- Partie 5 : 5.1 (cache, `persist`, `unpersist`), 5.2 (broadcast, partitions de shuffle), 5.3 (bonus, mesure avant/après)
-- Partie 6 : 6.1 (application principale), 6.2 (bonus, exécution par étape)
+### Membre C – Ibrahima / Dominique (Parties 4, 5 et 6, reprises de Mahamat)
+- Partie 4 (Ibrahima) : 4.1 (KPI par marchand), 4.2 (cohortes et rétention)
+- Partie 5 (Dominique) : 5.1 (cache, `persist`, `unpersist`), 5.2 (broadcast, partitions de shuffle), 5.3 (bonus, mesure avant/après)
+- Partie 6 (Dominique) : 6.1 (application principale), 6.2 (bonus, exécution par étape)
 
 ## Parties collectives
 - Partie 0 : organisation, `EQUIPE.md`, Git, `CONTRIBUTIONS.md`
@@ -35,11 +37,11 @@ Projet final Spark & Scala : système d'analyse de données e-commerce.
 ## Relecteurs
 | Module | Auteur | Relecteur |
 |---|---|---|
-| Parties 1 et 7 | A | C |
-| Partie 2 | A | B |
-| Partie 3 | B | A |
-| Partie 4 | C | B |
-| Partie 5 | C | A et B |
-| Partie 6 | C | Intégration validée par A, B et C |
+| Parties 1 et 7 | A (Dominique) | B (Ibrahima) |
+| Partie 2 | A (Dominique) | B (Ibrahima) |
+| Partie 3 | B (Ibrahima) | A (Dominique) |
+| Partie 4 | C (Ibrahima) | A (Dominique) |
+| Partie 5 | C (Dominique) | B (Ibrahima) |
+| Partie 6 | C (Dominique) | B (Ibrahima), intégration validée par Dominique et Ibrahima |
 
 Le détail des relectures (dates, remarques) est dans `CONTRIBUTIONS.md`.

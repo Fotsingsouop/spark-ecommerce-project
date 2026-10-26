@@ -5,16 +5,18 @@
 |Question|Contenu|Responsable|Relecteur|
 |-|-|-|-|
 |Partie 0|Organisation, EQUIPE.md, Git, CONTRIBUTIONS.md|Collectif|Collectif|
-|Partie 1|Structure SBT, build.sbt, README|A (Dominique)|C (Mahamat)|
+|Partie 1|Structure SBT, build.sbt, README|A (Dominique)|B (Ibrahima), en remplacement de Mahamat|
 |Partie 2 (2.1 à 2.5)|Ingestion, validation, rapport de qualité, intégrité référentielle (bonus 2.5 traité)|A (Dominique)|B (Ibrahima)|
 |Partie 3 (3.1 à 3.4)|UDF temporelle, enrichissement, fenêtres, transactions suspectes (bonus 3.4 traité)|B (Ibrahima)|A (Dominique)|
-|Partie 4 (4.1 et 4.2)|KPI marchands, rétention par cohortes (reprise par Ibrahima le 26/10/2026, la partie de Mahamat n'ayant pas été livrée)|B (Ibrahima), initialement C (Mahamat)|A (Dominique)|
-|Partie 5 (5.1 à 5.3)|Cache, broadcast, mesures avant/après|C (Mahamat)|A (Dominique) et B (Ibrahima)|
-|Partie 6 (6.1 et 6.2)|Application principale, mesure des durées|C (Mahamat)|Intégration validée par A, B et C|
-|Partie 7|application.conf|A (Dominique)|C (Mahamat)|
+|Partie 4 (4.1 et 4.2)|KPI marchands, rétention par cohortes (reprise de la partie C le 26/10/2026, Mahamat n'ayant rien livré)|C (Ibrahima)|A (Dominique)|
+|Partie 5 (5.1 à 5.3)|Cache, broadcast, mesures avant/après (reprise de la partie C le 26/10/2026)|C (Dominique)|B (Ibrahima)|
+|Partie 6 (6.1 et 6.2)|Application principale, mesure des durées (reprise de la partie C le 26/10/2026)|C (Dominique)|B (Ibrahima), intégration validée par Dominique et Ibrahima|
+|Partie 7|application.conf|A (Dominique)|B (Ibrahima), en remplacement de Mahamat|
 |Partie 8|Livrables et soutenance|Collectif|Collectif|
 
 ## 2\. Charge de travail et difficultés
+
+Le membre C (Mahamat) n'a pas participé au projet. Ses parties 4, 5 et 6 ont été reprises le 26/10/2026 : la partie 4 par Ibrahima, les parties 5 et 6 par Dominique. Le membre C est donc désormais Ibrahima / Dominique.
 
 ### Membre A – Dominique
 
@@ -29,11 +31,11 @@ Centralisation et lecture dynamique de la configuration Hadoop : Le déplacement
 * Charge estimée : 35 heures (parties 3 et 4, la partie 4 ayant été reprise le 26/10/2026)
 * Difficultés : installation de Spark et de sbt sous Windows (réseau d'entreprise, versions de Java) ; compatibilité des versions Scala (2.12 contre 2.13) avec `spark-submit` ; affichage des accents dans la console Windows (problème d'affichage uniquement, les données sont correctes) ; dates invalides (700 timestamps inexploitables) : l'UDF renvoie un `Option`, donc une valeur nulle au lieu d'une erreur, avec un parsing strict (le 31 février est refusé) ; compréhension des fenêtres glissantes (`rangeBetween` en secondes pour de vrais 7 jours) et contournement de `countDistinct`, interdit dans une fenêtre, par `size(collect\\\_set(...))` ; ambiguïtés du sujet (âge de 25 ans, bornes de `is\\\_working\\\_hours`) ; alignement des modèles de données et de la configuration des trois membres sur une base commune ; nettoyage du dépôt Git partagé (`.git` de près de 200 Mo à moins de 4 Mo) ; collaboration à distance avec des fuseaux horaires différents; reprise de la partie 4 en fin de projet : choix de ne garder que les marchands connus (586) pour les KPI et définition du revenu moyen par utilisateur d'une cohorte (taille initiale).
 
-### Membre C – Ibrahima/Dominique
+### Membre C – Ibrahima / Dominique (parties reprises de Mahamat)
 
-* Charge estimée : Dominique 5 / Ibrahima xx heures
-* Difficultés : Dominique: 
-Difficultés de la mise en place de l'exécution des pipelines en ordre et et de la mesure du gain apporté par les optimisations.
+* Partie 4 : Ibrahima. Partie 5 et partie 6 : Dominique.
+* Charge estimée : Dominique 5 heures (parties 5 et 6) ; Ibrahima : voir le bloc du membre B (la partie 4 y est comptée).
+* Difficultés : Dominique : mise en place de l'exécution des pipelines dans l'ordre et mesure du gain apporté par les optimisations. Ibrahima : voir le bloc du membre B (choix des marchands connus et définition du revenu moyen par cohorte).
 
 ## 3\. Décisions techniques du groupe
 
@@ -74,10 +76,10 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 |20/10/2026|Partie 2 (première version : ingestion, validation, rapport)|Dominique|Ibrahima|Code exécuté sous Windows (Java 11, sbt 1.9.8) : les quatre sources se chargent avec les bons volumes (600, 138 047, 12 000, 6 000). Corrections proposées : erreur `$"coalesce"(...)` remplacée par `coalesce(...)` ; lignes rejetées conservées avec leur motif (DataFrame) ; âge en `Int` au lieu de `BigInt` ; ajout du comptage des nulles.|
 |21/10/2026|Partie 2 (deuxième version)|Dominique|Ibrahima|Version exécutée avec les mêmes chiffres de validation que mes calculs de contrôle (586, 136 157, 11 655 valides pour merchants, transactions, users). Corrections proposées pour respecter le sujet : placement des fichiers dans `analytics`, `models` et `utils` ; valeur par défaut des clés de configuration (7.1) ; note entre 1 et 5 (et non 0 à 5) ; try-catch par fichier avec nombre de lignes lues (2.3) ; colonne `dataset` du rapport (2.4) ; rapport écrit en un seul fichier CSV ; trois compteurs d'orphelins ajoutés au rapport (2.5) ; suppression du chemin `C:\\\\hadoop` écrit en dur ; passage de `reference.conf` en `concat` dans la configuration d'assembly.|
 |26/10/2026|Partie 3 (UDF, enrichissement, fenêtres, suspectes)|Ibrahima|Dominique|Code relu et jugé « excellent » avec trois points à revoir. (1) Seuils de `detectSuspicious` (facteur 4 du panier moyen, 300 secondes) en dur : déplacés dans `application.conf`, bloc `app.transformation`, avec valeurs par défaut dans le code. (2) Mode de paiement autre que `CRYPTO` dans le top 20 : ce n'est pas une erreur, une transaction est suspecte avec 2 conditions sur 4 et `CRYPTO` n'en est qu'une ; colonnes `nb\_conditions` et `suspicion\_raisons` ajoutées à l'affichage. (3) Catégorie de marchand `null` après le `LEFT JOIN` : affichée `INCONNU` dans le top 20 (affichage seulement, les données gardent `null`). Corrections dans le commit cd89c6c.|
-|26/10/2026|Partie 4 (KPI marchands, cohortes)|Ibrahima (reprise de la partie de Mahamat)|Dominique|Bon rien à signaler|
-|<à compléter>|Partie 5 (optimisations)|Mahamat|Dominique et Ibrahima|<à compléter>|
-|<à compléter>|Partie 1 et Partie 7 (build.sbt, README, configuration)|Dominique|Mahamat|<à compléter par Mahamat>|
-|<à compléter>|Partie 6 (application principale)|Mahamat|Dominique, Ibrahima, Mahamat|<à compléter>|
+|26/10/2026|Partie 4 (KPI marchands, cohortes)|Ibrahima (reprise de la partie C)|Dominique|Relu : filtre sur les marchands connus, revenu moyen par taille initiale de cohorte, `period_index`. Aucune remarque.|
+|26/10/2026|Partie 1 et Partie 7 (build.sbt, README, application.conf)|Dominique|Ibrahima (en remplacement de Mahamat)|Clone neuf du dépôt (commit 1977c77), `sbt clean compile` réussi (10 fichiers Scala, Java 11, sbt 1.9.7), configuration lue correctement. Points relevés : (1) la règle d'assembly `MergeStrategy.discard` sur `META-INF` supprime aussi `META-INF/services` et peut empêcher Spark de retrouver ses lecteurs CSV/Parquet dans le JAR : ajouter une règle `concat` pour `META-INF/services` avant la règle `discard` ; (2) `app-name` « Groupe3 » à remplacer par « Groupe6 » ; (3) deux commandes du README à corriger : `com.AnalyticsDemo` et `com.ecommerce.TransformationDemo` doivent être `com.ecommerce.analytics.AnalyticsDemo` et `com.ecommerce.analytics.TransformationDemo`.|
+|26/10/2026|Partie 5 (optimisations)|Dominique (reprise de la partie C)|Ibrahima|Cache (`persist` MEMORY_AND_DISK_SER, `cache`), `unpersist` en fin d'exécution et hint de broadcast présents. Points relevés : `enable-cache` est lu par les démos mais `MainApp` applique toujours le cache ; `unpersist` est dans le `try` et non dans le `finally`. Les mesures de la section 4 n'ont pas été refaites par le relecteur.|
+|26/10/2026|Partie 6 (application principale)|Dominique (reprise de la partie C)|Ibrahima|`sbt "runMain com.ecommerce.MainApp all"` exécuté sur un clone neuf : 34 s, sans erreur. Chiffres de contrôle retrouvés (586, 5 821, 136 157 et 11 655 lignes valides ; 400, 300 et 250 orphelins ; 136 157 transactions enrichies ; 2 999 suspectes ; top 20 identique). Point relevé : le mode `all` ne lance pas les KPI marchands ni les cohortes (partie 4), qui se lancent avec `AnalyticsDemo`.|
 
 ## 6\. Historique Git de Ibrahima (partie 3, puis partie 4 reprise)
 
@@ -93,6 +95,8 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 |e7cafe6|TransformationDemo : adaptation au package utils|24/10/2026|
 |cd89c6c|Partie 3 : corrections suite a la relecture de Dominique (seuils dans application.conf, raisons de suspicion, categorie INCONNU a l'affichage)|26/10/2026|
 |6c593e9|Partie 4 : Analytics (rapport par marchand, cohortes de retention) et AnalyticsDemo|26/10/2026|
+|d6bc778|Partie 4 : rapport marchands limité aux marchands connus, revenu moyen par taille de cohorte ; relecture de la partie 3 et reprise de la partie 4 dans CONTRIBUTIONS.md|26/10/2026|
+|83422b3|CONTRIBUTIONS.md : charge de travail d'Ibrahima (parties 3 et 4)|26/10/2026|
 
 
 Commit Dominique
@@ -132,6 +136,11 @@ Les commits de la partie 3 ne touchent que `TimeFeatures.scala`, `DataTransforma
 
 * KPI : 586 marchands, 133 024 transactions rattachées à un marchand connu, chiffre d'affaires de 52 592 586,01 et commission d'environ 2 743 507,69. Meilleur marchand : M00225, 592 105,25.
 * Cohortes : 300 lignes (24 cohortes) ; meilleure rétention à 3 mois : cohorte 2025-06-01, 122 actifs sur 337, soit 36,2 %.
+
+**Exécution du projet (clone neuf, commit 1977c77, relecture du 26/10/2026)**
+
+* `sbt clean compile` : 10 fichiers Scala compilés (Java 11, sbt 1.9.7).
+* `sbt "runMain com.ecommerce.MainApp all"` : 34 s, sans erreur. Lignes valides 586, 5 821, 136 157 et 11 655 ; orphelins 400, 300 et 250 ; 136 157 transactions enrichies ; 2 999 suspectes.
 
 **Exécution du JAR**
 
