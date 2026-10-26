@@ -29,10 +29,11 @@ Centralisation et lecture dynamique de la configuration Hadoop : Le déplacement
 * Charge estimée : 35 heures (parties 3 et 4, la partie 4 ayant été reprise le 26/10/2026)
 * Difficultés : installation de Spark et de sbt sous Windows (réseau d'entreprise, versions de Java) ; compatibilité des versions Scala (2.12 contre 2.13) avec `spark-submit` ; affichage des accents dans la console Windows (problème d'affichage uniquement, les données sont correctes) ; dates invalides (700 timestamps inexploitables) : l'UDF renvoie un `Option`, donc une valeur nulle au lieu d'une erreur, avec un parsing strict (le 31 février est refusé) ; compréhension des fenêtres glissantes (`rangeBetween` en secondes pour de vrais 7 jours) et contournement de `countDistinct`, interdit dans une fenêtre, par `size(collect\\\_set(...))` ; ambiguïtés du sujet (âge de 25 ans, bornes de `is\\\_working\\\_hours`) ; alignement des modèles de données et de la configuration des trois membres sur une base commune ; nettoyage du dépôt Git partagé (`.git` de près de 200 Mo à moins de 4 Mo) ; collaboration à distance avec des fuseaux horaires différents; reprise de la partie 4 en fin de projet : choix de ne garder que les marchands connus (586) pour les KPI et définition du revenu moyen par utilisateur d'une cohorte (taille initiale).
 
-### Membre C – Mahamat
+### Membre C – Ibrahima/Dominique
 
-* Charge estimée : <à compléter> heures
-* Difficultés : <à compléter>
+* Charge estimée : Dominique 5 / Ibrahima xx heures
+* Difficultés : Dominique: 
+Difficultés de la mise en place de l'exécution des pipelines en ordre et et de la mesure du gain apporté par les optimisations.
 
 ## 3\. Décisions techniques du groupe
 
@@ -73,7 +74,7 @@ Le cache est un investissement : la transformation est plus lente, puis le gain 
 |20/10/2026|Partie 2 (première version : ingestion, validation, rapport)|Dominique|Ibrahima|Code exécuté sous Windows (Java 11, sbt 1.9.8) : les quatre sources se chargent avec les bons volumes (600, 138 047, 12 000, 6 000). Corrections proposées : erreur `$"coalesce"(...)` remplacée par `coalesce(...)` ; lignes rejetées conservées avec leur motif (DataFrame) ; âge en `Int` au lieu de `BigInt` ; ajout du comptage des nulles.|
 |21/10/2026|Partie 2 (deuxième version)|Dominique|Ibrahima|Version exécutée avec les mêmes chiffres de validation que mes calculs de contrôle (586, 136 157, 11 655 valides pour merchants, transactions, users). Corrections proposées pour respecter le sujet : placement des fichiers dans `analytics`, `models` et `utils` ; valeur par défaut des clés de configuration (7.1) ; note entre 1 et 5 (et non 0 à 5) ; try-catch par fichier avec nombre de lignes lues (2.3) ; colonne `dataset` du rapport (2.4) ; rapport écrit en un seul fichier CSV ; trois compteurs d'orphelins ajoutés au rapport (2.5) ; suppression du chemin `C:\\\\hadoop` écrit en dur ; passage de `reference.conf` en `concat` dans la configuration d'assembly.|
 |26/10/2026|Partie 3 (UDF, enrichissement, fenêtres, suspectes)|Ibrahima|Dominique|Code relu et jugé « excellent » avec trois points à revoir. (1) Seuils de `detectSuspicious` (facteur 4 du panier moyen, 300 secondes) en dur : déplacés dans `application.conf`, bloc `app.transformation`, avec valeurs par défaut dans le code. (2) Mode de paiement autre que `CRYPTO` dans le top 20 : ce n'est pas une erreur, une transaction est suspecte avec 2 conditions sur 4 et `CRYPTO` n'en est qu'une ; colonnes `nb\_conditions` et `suspicion\_raisons` ajoutées à l'affichage. (3) Catégorie de marchand `null` après le `LEFT JOIN` : affichée `INCONNU` dans le top 20 (affichage seulement, les données gardent `null`). Corrections dans le commit cd89c6c.|
-|<à compléter>|Partie 4 (KPI marchands, cohortes)|Ibrahima (reprise de la partie de Mahamat)|Dominique|<à compléter par Dominique>|
+|26/10/2026|Partie 4 (KPI marchands, cohortes)|Ibrahima (reprise de la partie de Mahamat)|Dominique|Bon rien à signaler|
 |<à compléter>|Partie 5 (optimisations)|Mahamat|Dominique et Ibrahima|<à compléter>|
 |<à compléter>|Partie 1 et Partie 7 (build.sbt, README, configuration)|Dominique|Mahamat|<à compléter par Mahamat>|
 |<à compléter>|Partie 6 (application principale)|Mahamat|Dominique, Ibrahima, Mahamat|<à compléter>|
